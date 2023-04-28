@@ -1,63 +1,88 @@
 #include <Novice.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <assert.h>
 
 const char kWindowTitle[] = "LE2B_06_オオハシヒロキ";
 
-struct Vector3 {
-	float x, y, z;
+struct Vector3{
+	float x;
+	float y;
+	float z;
 };
-// 加算
-Vector3 Add(const Vector3& v1, const Vector3& v2) {
-	Vector3 add;
-	add.x = v1.x + v2.x;
-	add.y = v1.y + v2.y;
-	add.z = v1.z + v2.z;
-	return add;
+
+struct Matrix4x4 {
+	float m[4][4];
+};
+
+// 平行移動行列
+Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
+	Matrix4x4 MakeTranslateMatrix;
+	MakeTranslateMatrix.m[0][0] = 1.0f;
+	MakeTranslateMatrix.m[0][1] = 0.0f;
+	MakeTranslateMatrix.m[0][2] = 0.0f;
+	MakeTranslateMatrix.m[0][3] = 0.0f;
+	MakeTranslateMatrix.m[1][0] = 0.0f;
+	MakeTranslateMatrix.m[1][1] = 1.0f;
+	MakeTranslateMatrix.m[1][2] = 0.0f;
+	MakeTranslateMatrix.m[1][3] = 0.0f;
+	MakeTranslateMatrix.m[2][0] = 0.0f;
+	MakeTranslateMatrix.m[2][1] = 0.0f;
+	MakeTranslateMatrix.m[2][2] = 1.0f;
+	MakeTranslateMatrix.m[2][3] = 0.0f;
+	MakeTranslateMatrix.m[3][0] = translate.x;
+	MakeTranslateMatrix.m[3][1] = translate.y;
+	MakeTranslateMatrix.m[3][2] = translate.z;
+	MakeTranslateMatrix.m[3][3] = 1.0f;
+	return MakeTranslateMatrix;
 }
-// 減算
-Vector3 subtract(const Vector3& v1, const Vector3& v2) {
-	Vector3 subtract;
-	subtract.x = v1.x - v2.x;
-	subtract.y = v1.y - v2.y;
-	subtract.z = v1.z - v2.z;
-	return subtract;
-}
-// スカラー倍
-Vector3 Multiply(float scalar, const Vector3& v) {
-	Vector3 Multiply;
-	Multiply.x = scalar * v.x;
-	Multiply.y = scalar * v.y;
-	Multiply.z = scalar * v.z;
-	return Multiply;
-}
-// 内積
-float Dot(const Vector3& v1, const Vector3& v2) {
-	float Dot;
-	Dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-	return Dot;
-}
-// 長さ
-float Length(const Vector3& v) {
-	float Length = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
-	return Length;
-}
-// 正規化
-Vector3 Normalize(const Vector3& v) {
-	Vector3 Normalize;
-	float mag = 1 / sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
-	Normalize.x = v.x * mag;
-	Normalize.y = v.y * mag;
-	Normalize.z = v.z * mag;
-	return Normalize;
+// 拡大縮小行列
+Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
+	Matrix4x4 MakeScaleMatrix;
+	MakeScaleMatrix.m[0][0] = scale.x;
+	MakeScaleMatrix.m[0][1] = 0.0f;
+	MakeScaleMatrix.m[0][2] = 0.0f;
+	MakeScaleMatrix.m[0][3] = 0.0f;
+	MakeScaleMatrix.m[1][0] = 0.0f;
+	MakeScaleMatrix.m[1][1] = scale.y;
+	MakeScaleMatrix.m[1][2] = 0.0f;
+	MakeScaleMatrix.m[1][3] = 0.0f;
+	MakeScaleMatrix.m[2][0] = 0.0f;
+	MakeScaleMatrix.m[2][1] = 0.0f;
+	MakeScaleMatrix.m[2][2] = scale.z;
+	MakeScaleMatrix.m[2][3] = 0.0f;
+	MakeScaleMatrix.m[3][0] = 0.0f;
+	MakeScaleMatrix.m[3][1] = 0.0f;
+	MakeScaleMatrix.m[3][2] = 0.0f;
+	MakeScaleMatrix.m[3][3] = 1.0f;
+	return MakeScaleMatrix;
 }
 
+Vector3 Transform(const Vector3& vecter, const Matrix4x4& matrix) {
+	Vector3 Transform;
+	Transform.x = vecter.x * matrix.m[0][0] + vecter.y * matrix.m[1][0] + vecter.z * matrix.m[2][0] + 1.0f * matrix.m[3][0];
+	Transform.y = vecter.x * matrix.m[0][1] + vecter.y * matrix.m[1][1] + vecter.z * matrix.m[2][1] + 1.0f * matrix.m[3][1];
+	Transform.z = vecter.x * matrix.m[0][2] + vecter.z * matrix.m[1][2] + vecter.z * matrix.m[2][2] + 1.0f * matrix.m[3][2];
+	float w = vecter.x * matrix.m[0][3] + vecter.y * matrix.m[1][3] + vecter.z * matrix.m[2][3] + 1.0f * matrix.m[3][3];
+	assert(w != 0.0f);
+	Transform.x /= w;
+	Transform.y /= w;
+	Transform.z /= w;
+	return Transform;
+}
+
+static const int kRowHeight = 20;
 static const int kColumnWidth = 60;
+void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label) {
+	for (int row = 0; row < 4; ++row) {
+		for (int column = 0; column < 4; ++column) {
+			Novice::ScreenPrintf(x + column * kColumnWidth, y + row * kRowHeight, "%6.02f", matrix.m[row][column], label);
+		}
+	}
+}
+
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) {
-	Novice::ScreenPrintf(x, y, "%.02f", vector.x);
-	Novice::ScreenPrintf(x + kColumnWidth, y, "%.02f", vector.y);
-	Novice::ScreenPrintf(x + kColumnWidth * 2, y, "%.02f", vector.z);
-	Novice::ScreenPrintf(x + kColumnWidth * 3, y, "%s", label);
+	Novice::ScreenPrintf(x, y, "%.02f", vector, label);
 }
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -70,9 +95,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = { 0 };
 	char preKeys[256] = { 0 };
 
-	Vector3 v1{ 1.0f, 3.0f, -5.0f };
-	Vector3 v2{ 4.0f, -1.0f, 2.0f };
-	float k = { 4.0f };
+	Vector3 translate{ 4.1f, 2.6f, 0.8f };
+	Vector3 scale{ 1.5f, 5.2f, 7.3f };
+
+	Vector3 point{ 2.3f, 3.0f, 1.4f };
+
+	Matrix4x4 transformMatrix = {
+		1.0f, 2.0f, 3.0f, 4.0f,
+		3.0f, 1.0f, 1.0f, 2.0f,
+		1.0f, 4.0f, 2.0f, 3.0f,
+		2.0f, 2.0f, 1.0f, 3.0f
+	};
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -86,13 +119,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓更新処理ここから
 		///
+		
+		Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
+		Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
 
-		Vector3 resultAdd = Add(v1, v2);
-		Vector3 resultSubtract = subtract(v1, v2);
-		Vector3 resultMultiply = Multiply(k, v1);
-		float resultDot = Dot(v1, v2);
-		float resultLength = Length(v1);
-		Vector3 resultNormalize = Normalize(v2);
+		Vector3 transformed = Transform(point, transformMatrix);
 
 		///
 		/// ↑更新処理ここまで
@@ -102,13 +133,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		VectorScreenPrintf(0, 0, resultAdd, " : Add");
-		VectorScreenPrintf(0, 20, resultSubtract, " : Subtract");
-		VectorScreenPrintf(0, 40, resultMultiply, " : Multiply");
-		Novice::ScreenPrintf(0, 60, "%.02f : Dot", resultDot);
-		Novice::ScreenPrintf(0, 80, "%.02f : Length", resultLength);
-		VectorScreenPrintf(0, 100, resultNormalize, " : Normalize");
-
+		VectorScreenPrintf(0, 0, transformed, "transformed");
+		MatrixScreenPrintf(0, 20, translateMatrix, "translateMatrix");
+		MatrixScreenPrintf(0, 110, scaleMatrix, "scaleMatrix");
 		///
 		/// ↑描画処理ここまで
 		///
