@@ -396,7 +396,6 @@ Matrix4x4 MakeViewPortMatrix(float left, float top, float width, float height, f
 	return MakeViewportMatrix;
 }
 
-
 Vector3 Cross(const Vector3& v1, const Vector3& v2) {
 	Vector3 Cross;
 	Cross.x = v1.y * v2.z - v1.z * v2.y;
@@ -408,6 +407,19 @@ Vector3 Cross(const Vector3& v1, const Vector3& v2) {
 float Dot(const Vector3& v1, const Vector3& v2) {
 	float result = (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
 	return result;
+}
+
+float Length(const Vector3& v) {
+	return sqrtf(Dot(v, v));
+}
+
+bool IsCollision(const Sphere& s1, const Sphere& s2)
+{
+	float distance = Length(Subtract(s2.center, s1.center));
+	if (distance <= s1.radius + s2.radius) {
+		return true;
+	}
+	return false;
 }
 
 Vector3 Normalize(const Vector3& v1) {
@@ -448,6 +460,7 @@ Vector3 screenVertices[3];
 static const int kRowHeight = 20;
 static const int kColumnWindth = 60;
 static const int kColumWidth = 60;
+
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label) {
 	Novice::ScreenPrintf(x, y - kRowHeight, "%s", label);
 	for (int row = 0; row < 4; ++row) {
@@ -484,12 +497,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	kLoccalVerices[1] = { 1.0f,1.0f,0.0f };
 	kLoccalVerices[2] = { -1.0f,1.0f,0.0f };
 
-	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	Sphere sphere1 = { 0.0f,0.0f, 0.0f, 0.5f };
+	int sphereColor = WHITE;
+	Sphere sphere2 = { 2.0f,0.0f, 0.0f, 0.5f };
+
+	/*Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
 	Vector3 point{ -1.5f,0.6f,0.6f };
 	Vector3 project = Project(Subtract(point, segment.origin), segment.diff);
 	Vector3 closestPoint = ClosestPoint(point, segment);
 	Sphere pointSphere{ point,0.01f };
-	Sphere closestPointSphere{ closestPoint,0.01f };
+	Sphere closestPointSphere{ closestPoint,0.01f };*/
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -515,13 +532,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("SphereCenter", &sphere.center.x, 0.01f);
-		ImGui::DragFloat("SphereRadius", &sphere.radius, 0.01f);
+		//スフィアのImGui
+		ImGui::DragFloat3("Sphere1Center", &sphere1.center.x, 0.01f);
+		ImGui::DragFloat("Sphere1Radius", &sphere1.radius, 0.01f);
+		ImGui::DragFloat3("Sphere2Center", &sphere2.center.x, 0.01f);
+		ImGui::DragFloat("Sphere2Radius", &sphere2.radius, 0.01f);
 
-		Vector3 start = Transforme(Transforme(segment.origin, WorldViewProjectionMatrix), viewportMatrix);
-		Vector3 end = Transforme(Transforme(Add(segment.origin, segment.diff), WorldViewProjectionMatrix), viewportMatrix);
-		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
-		ImGui::InputFloat3("Project", &project.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		if (IsCollision(sphere1, sphere2) == true) {
+			sphereColor = RED;
+		}
+		else {
+			sphereColor = WHITE;
+		}
+
+
 
 		ImGui::End();
 
@@ -534,8 +558,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		//
 		DrawGrid(WorldViewProjectionMatrix, viewportMatrix);
-		DrawSphere(sphere, WorldViewProjectionMatrix, viewportMatrix, BLACK);
-
+		DrawSphere(sphere1, WorldViewProjectionMatrix, viewportMatrix, sphereColor);
+		DrawSphere(sphere2, WorldViewProjectionMatrix, viewportMatrix, WHITE);
 		VectorScreenPrintf(0, 0, cross, "Cross");
 
 
