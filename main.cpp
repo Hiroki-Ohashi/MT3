@@ -27,6 +27,11 @@ struct Segment {
 	Vector3 diff;//終点への差分ベクトル
 };
 
+struct Plane {
+	Vector3 normal;//法線
+	float distance;//距離
+};
+
 Vector3 Add(const Vector3& v1, const Vector3& v2)
 {
 	return Vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
@@ -422,6 +427,16 @@ bool IsCollision(const Sphere& s1, const Sphere& s2)
 	return false;
 }
 
+bool IsCollision(const Sphere& s1, const Plane& p1) {
+	float distance = Dot(Normalize(p1.normal), Subtract(s1.center, p1.distance));
+	if (std::abs(distance) <= s1.radius) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 Vector3 Normalize(const Vector3& v1) {
 	Vector3 Result = v1;
 	float length = sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
@@ -451,6 +466,35 @@ Vector3 ClosestPoint(const Vector3& point, const Segment& segment)
 	return Add(segment.origin, proj);
 };
 
+Vector3 Perpendicular(const Vector3& vector)
+{
+	if (vector.x != 0.0f || vector.y != 0.0f) {
+		return { -vector.y,vector.x,0.0f };
+	}
+	return { 0.0f,-vector.z,vector.y };
+}
+
+void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, unsigned int color) {
+	Vector3 center = Multiply(plane.distance, plane.normal);
+	Vector3 perpendiculars[4];
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));
+	perpendiculars[1] = { -perpendiculars[0].x,-perpendiculars[0].y,-perpendiculars[0].z };
+	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);
+	perpendiculars[3] = { -perpendiculars[2].x,-perpendiculars[2].y,-perpendiculars[2].z };
+
+	Vector3 points[4];
+	for (int32_t index = 0; index < 4; ++index) {
+		Vector3 extend = Multiply(2.0f, perpendiculars[index]);
+		Vector3 point = Add(center, extend);
+		points[index] = Transforme(Transforme(point, viewProjectionMatrix), viewportMatrix);
+	}
+
+	Novice::DrawLine((int)points[0].x, (int)points[0].y, (int)points[2].x, (int)points[2].y, color);
+	Novice::DrawLine((int)points[1].x, (int)points[1].y, (int)points[3].x, (int)points[3].y, color);
+	Novice::DrawLine((int)points[2].x, (int)points[2].y, (int)points[1].x, (int)points[1].y, color);
+	Novice::DrawLine((int)points[3].x, (int)points[3].y, (int)points[0].x, (int)points[0].y, color);
+}
+
 Vector3 v1{ 1.2f,-3.9f,2.5f };
 Vector3 v2{ 2.8f,0.4f,-1.3f };
 Vector3 cross = Cross(v1, v2);
@@ -475,6 +519,8 @@ void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) 
 	Novice::ScreenPrintf(x + kColumWidth * 2, y, "%.02f", vector.z);
 	Novice::ScreenPrintf(x + kColumWidth * 3, y, "%s", label);
 }
+
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -501,12 +547,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int sphereColor = WHITE;
 	Sphere sphere2 = { 2.0f,0.0f, 0.0f, 0.5f };
 
-	/*Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
-	Vector3 point{ -1.5f,0.6f,0.6f };
-	Vector3 project = Project(Subtract(point, segment.origin), segment.diff);
-	Vector3 closestPoint = ClosestPoint(point, segment);
-	Sphere pointSphere{ point,0.01f };
-	Sphere closestPointSphere{ closestPoint,0.01f };*/
+	Plane plane = { {0.0f,1.0f,0.0f},1.0f };
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -538,7 +579,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("Sphere2Center", &sphere2.center.x, 0.01f);
 		ImGui::DragFloat("Sphere2Radius", &sphere2.radius, 0.01f);
 
-		if (IsCollision(sphere1, sphere2) == true) {
+		//PlaneのImGui
+		ImGui::DragFloat3("PlaneCenter", &plane.normal.x, 0.01f);
+
+		if (IsCollision(sphere1, plane) == true) {
 			sphereColor = RED;
 		}
 		else {
@@ -558,8 +602,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		//
 		DrawGrid(WorldViewProjectionMatrix, viewportMatrix);
+		DrawPlane(plane, WorldViewProjectionMatrix, viewportMatrix, WHITE);
 		DrawSphere(sphere1, WorldViewProjectionMatrix, viewportMatrix, sphereColor);
-		DrawSphere(sphere2, WorldViewProjectionMatrix, viewportMatrix, WHITE);
 		VectorScreenPrintf(0, 0, cross, "Cross");
 
 
