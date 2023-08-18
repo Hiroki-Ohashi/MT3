@@ -5,7 +5,7 @@
 #include<Matrix4x4.h>
 #include <imGui.h>
 #include <Vector3.h>
-
+#include <algorithm>
 
 const char kWindowTitle[] = "LE2B_06_オオハシヒロキ";
 
@@ -14,9 +14,26 @@ struct Sphere {
 	float radius;
 };
 
+struct Line {
+	Vector3 origin;//始点
+	Vector3 diff;//終点への差分ベクトル
+};
+struct Ray {
+	Vector3 origin;//始点
+	Vector3 diff;//終点への差分ベクトル
+};
+struct Segment {
+	Vector3 origin;//始点
+	Vector3 diff;//終点への差分ベクトル
+};
+
 Vector3 Add(const Vector3& v1, const Vector3& v2)
 {
 	return Vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+}
+
+Vector3 Subtract(const Vector3& v1, const Vector3& v2) {
+	return Vector3{ v1.x - v2.x, v1.y - v2.y, v1.z - v2.z };
 }
 
 Vector3 Transforme(const Vector3& vector, const Matrix4x4& matrix) {
@@ -105,6 +122,53 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 	}
 
 };
+
+Matrix4x4 MakeCamera();
+
+// 回転行列
+Matrix4x4 Multiply(Matrix4x4 m1, Matrix4x4 m2) {
+	Matrix4x4 m4;
+	m4.m[0][0] = m1.m[0][0] * m2.m[0][0] + m1.m[0][1] * m2.m[1][0] + m1.m[0][2] * m2.m[2][0] +
+		m1.m[0][3] * m2.m[3][0];
+	m4.m[0][1] = m1.m[0][0] * m2.m[0][1] + m1.m[0][1] * m2.m[1][1] + m1.m[0][2] * m2.m[2][1] +
+		m1.m[0][3] * m2.m[3][1];
+	m4.m[0][2] = m1.m[0][0] * m2.m[0][2] + m1.m[0][1] * m2.m[1][2] + m1.m[0][2] * m2.m[2][2] +
+		m1.m[0][3] * m2.m[3][2];
+	m4.m[0][3] = m1.m[0][0] * m2.m[0][3] + m1.m[0][1] * m2.m[1][3] + m1.m[0][2] * m2.m[2][3] +
+		m1.m[0][3] * m2.m[3][3];
+
+	m4.m[1][0] = m1.m[1][0] * m2.m[0][0] + m1.m[1][1] * m2.m[1][0] + m1.m[1][2] * m2.m[2][0] +
+		m1.m[1][3] * m2.m[3][0];
+	m4.m[1][1] = m1.m[1][0] * m2.m[0][1] + m1.m[1][1] * m2.m[1][1] + m1.m[1][2] * m2.m[2][1] +
+		m1.m[1][3] * m2.m[3][1];
+	m4.m[1][2] = m1.m[1][0] * m2.m[0][2] + m1.m[1][1] * m2.m[1][2] + m1.m[1][2] * m2.m[2][2] +
+		m1.m[1][3] * m2.m[3][2];
+	m4.m[1][3] = m1.m[1][0] * m2.m[0][3] + m1.m[1][1] * m2.m[1][3] + m1.m[1][2] * m2.m[2][3] +
+		m1.m[1][3] * m2.m[3][3];
+
+	m4.m[2][0] = m1.m[2][0] * m2.m[0][0] + m1.m[2][1] * m2.m[1][0] + m1.m[2][2] * m2.m[2][0] +
+		m1.m[2][3] * m2.m[3][0];
+	m4.m[2][1] = m1.m[2][0] * m2.m[0][1] + m1.m[2][1] * m2.m[1][1] + m1.m[2][2] * m2.m[2][1] +
+		m1.m[2][3] * m2.m[3][1];
+	m4.m[2][2] = m1.m[2][0] * m2.m[0][2] + m1.m[2][1] * m2.m[1][2] + m1.m[2][2] * m2.m[2][2] +
+		m1.m[2][3] * m2.m[3][2];
+	m4.m[2][3] = m1.m[2][0] * m2.m[0][3] + m1.m[2][1] * m2.m[1][3] + m1.m[2][2] * m2.m[2][3] +
+		m1.m[2][3] * m2.m[3][3];
+
+	m4.m[3][0] = m1.m[3][0] * m2.m[0][0] + m1.m[3][1] * m2.m[1][0] + m1.m[3][2] * m2.m[2][0] +
+		m1.m[3][3] * m2.m[3][0];
+	m4.m[3][1] = m1.m[3][0] * m2.m[0][1] + m1.m[3][1] * m2.m[1][1] + m1.m[3][2] * m2.m[2][1] +
+		m1.m[3][3] * m2.m[3][1];
+	m4.m[3][2] = m1.m[3][0] * m2.m[0][2] + m1.m[3][1] * m2.m[1][2] + m1.m[3][2] * m2.m[2][2] +
+		m1.m[3][3] * m2.m[3][2];
+	m4.m[3][3] = m1.m[3][0] * m2.m[0][3] + m1.m[3][1] * m2.m[1][3] + m1.m[3][2] * m2.m[2][3] +
+		m1.m[3][3] * m2.m[3][3];
+	return m4;
+}
+
+Vector3 Multiply(float scalar, const Vector3& v) {
+	return { v.x * scalar,v.y * scalar,v.z * scalar };
+}
 
 //逆行列
 Matrix4x4 Inverse(const Matrix4x4& m) {
@@ -218,47 +282,6 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
 
 	return MakeRotateZMatrix;
 }
-// 回転行列
-Matrix4x4 Multiply(Matrix4x4 m1, Matrix4x4 m2) {
-	Matrix4x4 m4;
-	m4.m[0][0] = m1.m[0][0] * m2.m[0][0] + m1.m[0][1] * m2.m[1][0] + m1.m[0][2] * m2.m[2][0] +
-		m1.m[0][3] * m2.m[3][0];
-	m4.m[0][1] = m1.m[0][0] * m2.m[0][1] + m1.m[0][1] * m2.m[1][1] + m1.m[0][2] * m2.m[2][1] +
-		m1.m[0][3] * m2.m[3][1];
-	m4.m[0][2] = m1.m[0][0] * m2.m[0][2] + m1.m[0][1] * m2.m[1][2] + m1.m[0][2] * m2.m[2][2] +
-		m1.m[0][3] * m2.m[3][2];
-	m4.m[0][3] = m1.m[0][0] * m2.m[0][3] + m1.m[0][1] * m2.m[1][3] + m1.m[0][2] * m2.m[2][3] +
-		m1.m[0][3] * m2.m[3][3];
-
-	m4.m[1][0] = m1.m[1][0] * m2.m[0][0] + m1.m[1][1] * m2.m[1][0] + m1.m[1][2] * m2.m[2][0] +
-		m1.m[1][3] * m2.m[3][0];
-	m4.m[1][1] = m1.m[1][0] * m2.m[0][1] + m1.m[1][1] * m2.m[1][1] + m1.m[1][2] * m2.m[2][1] +
-		m1.m[1][3] * m2.m[3][1];
-	m4.m[1][2] = m1.m[1][0] * m2.m[0][2] + m1.m[1][1] * m2.m[1][2] + m1.m[1][2] * m2.m[2][2] +
-		m1.m[1][3] * m2.m[3][2];
-	m4.m[1][3] = m1.m[1][0] * m2.m[0][3] + m1.m[1][1] * m2.m[1][3] + m1.m[1][2] * m2.m[2][3] +
-		m1.m[1][3] * m2.m[3][3];
-
-	m4.m[2][0] = m1.m[2][0] * m2.m[0][0] + m1.m[2][1] * m2.m[1][0] + m1.m[2][2] * m2.m[2][0] +
-		m1.m[2][3] * m2.m[3][0];
-	m4.m[2][1] = m1.m[2][0] * m2.m[0][1] + m1.m[2][1] * m2.m[1][1] + m1.m[2][2] * m2.m[2][1] +
-		m1.m[2][3] * m2.m[3][1];
-	m4.m[2][2] = m1.m[2][0] * m2.m[0][2] + m1.m[2][1] * m2.m[1][2] + m1.m[2][2] * m2.m[2][2] +
-		m1.m[2][3] * m2.m[3][2];
-	m4.m[2][3] = m1.m[2][0] * m2.m[0][3] + m1.m[2][1] * m2.m[1][3] + m1.m[2][2] * m2.m[2][3] +
-		m1.m[2][3] * m2.m[3][3];
-
-	m4.m[3][0] = m1.m[3][0] * m2.m[0][0] + m1.m[3][1] * m2.m[1][0] + m1.m[3][2] * m2.m[2][0] +
-		m1.m[3][3] * m2.m[3][0];
-	m4.m[3][1] = m1.m[3][0] * m2.m[0][1] + m1.m[3][1] * m2.m[1][1] + m1.m[3][2] * m2.m[2][1] +
-		m1.m[3][3] * m2.m[3][1];
-	m4.m[3][2] = m1.m[3][0] * m2.m[0][2] + m1.m[3][1] * m2.m[1][2] + m1.m[3][2] * m2.m[2][2] +
-		m1.m[3][3] * m2.m[3][2];
-	m4.m[3][3] = m1.m[3][0] * m2.m[0][3] + m1.m[3][1] * m2.m[1][3] + m1.m[3][2] * m2.m[2][3] +
-		m1.m[3][3] * m2.m[3][3];
-	return m4;
-}
-
 
 
 //  アフィン変換行列
@@ -382,6 +405,39 @@ Vector3 Cross(const Vector3& v1, const Vector3& v2) {
 	return Cross;
 }
 
+float Dot(const Vector3& v1, const Vector3& v2) {
+	float result = (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
+	return result;
+}
+
+Vector3 Normalize(const Vector3& v1) {
+	Vector3 Result = v1;
+	float length = sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
+	assert(length != 0);
+	Result.x /= length;
+	Result.y /= length;
+	Result.z /= length;
+	return Result;
+}
+
+//正射影ベクトル
+Vector3 Project(const Vector3& v1, const Vector3& v2)
+{
+	Vector3 result;
+	result = Multiply(Dot(v1, Normalize(v2)), Normalize(v2));
+	return result;
+}
+//最近接点
+Vector3 ClosestPoint(const Vector3& point, const Segment& segment)
+{
+	float length = sqrt(segment.diff.x * segment.diff.x + segment.diff.y * segment.diff.y + segment.diff.z * segment.diff.z);
+	Vector3 normaliseSegment = { segment.diff.x / length,segment.diff.y / length,segment.diff.z / length };
+
+	float distance = Dot(Subtract(point, segment.origin), normaliseSegment);
+	distance = std::clamp(distance, 0.0f, length);
+	Vector3 proj = Multiply(distance, normaliseSegment);
+	return Add(segment.origin, proj);
+};
 
 Vector3 v1{ 1.2f,-3.9f,2.5f };
 Vector3 v2{ 2.8f,0.4f,-1.3f };
@@ -428,6 +484,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	kLoccalVerices[1] = { 1.0f,1.0f,0.0f };
 	kLoccalVerices[2] = { -1.0f,1.0f,0.0f };
 
+	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	Vector3 point{ -1.5f,0.6f,0.6f };
+	Vector3 project = Project(Subtract(point, segment.origin), segment.diff);
+	Vector3 closestPoint = ClosestPoint(point, segment);
+	Sphere pointSphere{ point,0.01f };
+	Sphere closestPointSphere{ closestPoint,0.01f };
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -455,6 +517,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
 		ImGui::DragFloat3("SphereCenter", &sphere.center.x, 0.01f);
 		ImGui::DragFloat("SphereRadius", &sphere.radius, 0.01f);
+
+		Vector3 start = Transforme(Transforme(segment.origin, WorldViewProjectionMatrix), viewportMatrix);
+		Vector3 end = Transforme(Transforme(Add(segment.origin, segment.diff), WorldViewProjectionMatrix), viewportMatrix);
+		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		ImGui::InputFloat3("Project", &project.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+
 		ImGui::End();
 
 
